@@ -1,3 +1,5 @@
 const validateData = require("./validateData");
 
-module.exports = { validateData };
+const authenticate = require("./authenticate");
+
+module.exports = { validateData, authenticate };

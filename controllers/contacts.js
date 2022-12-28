@@ -1,11 +1,19 @@
 const { Contact } = require("../models/contacts.js");
 
-const { HttpError } = require("../helpers");
-
-const { cntrlWrapper } = require("../helpers");
+const { HttpError, cntrlWrapper } = require("../helpers");
 
 const getAll = async (req, res) => {
-  const list = await Contact.find();
+  const { _id: owner } = req.user;
+  const { page = 1, limit = 10, favorite } = req.query;
+  const skip = (page - 1) * limit;
+  const list = await Contact.find(
+    favorite ? { owner, favorite } : { owner },
+    "-createdAt -updatedAt",
+    {
+      skip,
+      limit,
+    }
+  ).populate("owner", "email");
   if (!list) {
     throw HttpError(404);
   }
@@ -13,8 +21,9 @@ const getAll = async (req, res) => {
 };
 
 const getById = async (req, res) => {
-  const { contactId } = req.params;
-  const contact = await Contact.findById(contactId);
+  const _id = req.params.contactId;
+  const owner = req.user._id;
+  const contact = await Contact.findOne({ _id, owner });
   if (!contact) {
     throw HttpError(404);
   }
@@ -23,23 +32,26 @@ const getById = async (req, res) => {
 
 const addNewContact = async (req, res) => {
   const data = req.body;
-  const newContact = await Contact.create(data);
+  const owner = req.user._id;
+  const newContact = await Contact.create({ ...data, owner });
   res.status(201).json(newContact);
 };
 
 const deleteContact = async (req, res) => {
-  const { contactId } = req.params;
-  const message = await Contact.findByIdAndDelete(contactId);
-  if (!message) {
+  const _id = req.params.contactId;
+  const owner = req.user._id;
+  const deletedContact = await Contact.findOneAndRemove({ _id, owner });
+  if (!deletedContact) {
     throw HttpError(404);
   }
-  res.json({ message });
+  res.json(deletedContact);
 };
 
 const updateContactById = async (req, res) => {
-  const { contactId } = req.params;
+  const _id = req.params.contactId;
+  const owner = req.user._id;
   const data = req.body;
-  const contact = await Contact.findByIdAndUpdate(contactId, data, {
+  const contact = await Contact.findOneAndUpdate({ _id, owner }, data, {
     new: true,
   });
   if (!contact) {
@@ -49,11 +61,15 @@ const updateContactById = async (req, res) => {
 };
 
 const updateFavoriteStatus = async (req, res) => {
-  const { contactId } = req.params;
+  const _id = req.params.contactId;
+  const owner = req.user._id;
   const data = req.body;
-  const contact = await Contact.findByIdAndUpdate(contactId, data, {
+  const contact = await Contact.findOneAndUpdate({ _id, owner }, data, {
     new: true,
   });
+  if (!contact) {
+    throw HttpError(404);
+  }
   res.json(contact);
 };
 
