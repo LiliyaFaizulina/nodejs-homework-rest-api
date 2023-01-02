@@ -5,6 +5,12 @@ const { validateData, authenticate, upload } = require("../../middlewares");
 const controllers = require("../../controllers/users");
 
 router.post("/register", validateData(schemas.schema), controllers.register);
+router.get("/verify/:verificationToken", controllers.verify);
+router.post(
+  "/verify",
+  validateData(schemas.verifyEmailSchema),
+  controllers.resendVerifyEmail
+);
 router.post("/login", validateData(schemas.schema), controllers.login);
 router.post("/logout", authenticate, controllers.logout);
 router.get("/current", authenticate, controllers.getCurrentUser);
