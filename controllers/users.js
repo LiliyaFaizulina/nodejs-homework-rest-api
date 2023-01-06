@@ -10,12 +10,11 @@ const { User } = require("../models/users");
 const { cntrlWrapper, HttpError, sendMail } = require("../helpers");
 
 require("dotenv").config();
-const secret = process.env.SECRET_KEY;
-const PORT = process.env.PORT;
+const { BASE_URL, SECRET_KEY } = process.env;
 const AVATAR_SIZE_PX = 250;
 
 const register = async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, name } = req.body;
   const user = await User.findOne({ email });
 
   if (user) {
@@ -36,13 +35,14 @@ const register = async (req, res) => {
   const verifyEmail = {
     to: email,
     subject: "Verify your email",
-    html: `<p>Please, <a href="http://localhost:${PORT}/api/users/verify/${verificationToken}" target="_blank">click here</a> to verify your email</p>`,
+    html: `<p>Please, <a href="${BASE_URL}/api/users/verify/${verificationToken}" target="_blank">click here</a> to verify your email</p>`,
   };
 
   await sendMail(verifyEmail);
 
   res.status(201).json({
     user: {
+      name: newUser.name,
       email: newUser.email,
       subscription: newUser.subscription,
       avatarUrl: newUser.avatarUrl,
@@ -77,7 +77,7 @@ const resendVerifyEmail = async (req, res) => {
   const verifyEmail = {
     to: email,
     subject: "Verify your email",
-    html: `<p>Please, <a href="http://localhost:${PORT}/api/users/verify/${user.verificationToken}" target="_blank">click here</a> to verify your email</p>`,
+    html: `<p>Please, <a href="${BASE_URL}/api/users/verify/${user.verificationToken}" target="_blank">click here</a> to verify your email</p>`,
   };
 
   await sendMail(verifyEmail);
@@ -105,11 +105,12 @@ const login = async (req, res) => {
   }
 
   const id = user._id;
-  const token = jwt.sign({ id }, secret, { expiresIn: "23h" });
+  const token = jwt.sign({ id }, SECRET_KEY, { expiresIn: "23h" });
   await User.findByIdAndUpdate(id, { token });
   res.json({
     token,
     user: {
+      name: user.name,
       email: user.email,
       subscription: user.subscription,
       avatarUrl: user.avatarUrl,
@@ -124,8 +125,8 @@ const logout = async (req, res) => {
 };
 
 const getCurrentUser = (req, res) => {
-  const { email, subscription, avatarUrl } = req.user;
-  res.json({ user: { email, subscription, avatarUrl } });
+  const { name, email, subscription, avatarUrl } = req.user;
+  res.json({ user: { name, email, subscription, avatarUrl } });
 };
 
 const updateSubscription = async (req, res) => {
